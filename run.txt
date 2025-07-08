@@ -1,0 +1,2 @@
+flutter emulators --launch Medium_Phone_API_36.0
+flutter run -d emulator-5554

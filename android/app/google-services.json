@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "307093875331",
+    "project_id": "sinum-flutter",
+    "storage_bucket": "sinum-flutter.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:307093875331:android:210d25738ab966c0ecc9b6",
+        "android_client_info": {
+          "package_name": "com.example.sinum"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBACxQeFE_kgdO4ZydN-04DTTk1JZ4-unY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
