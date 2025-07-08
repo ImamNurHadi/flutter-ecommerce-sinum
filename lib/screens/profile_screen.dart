@@ -165,6 +165,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: Colors.grey,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _currentUser!.isAdmin 
+                          ? Colors.red[100] 
+                          : Colors.blue[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _currentUser!.roleDisplayName,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: _currentUser!.isAdmin 
+                            ? Colors.red[700] 
+                            : Colors.blue[700],
+                      ),
+                    ),
+                  ),
                   if (_currentUser!.address != null) ...[
                     const SizedBox(height: 8),
                     Row(

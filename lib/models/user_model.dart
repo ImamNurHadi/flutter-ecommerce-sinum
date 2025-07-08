@@ -1,3 +1,30 @@
+enum UserRole {
+  user('user'),
+  admin('admin');
+
+  const UserRole(this.value);
+  final String value;
+
+  static UserRole fromString(String value) {
+    switch (value.toLowerCase()) {
+      case 'admin':
+        return UserRole.admin;
+      case 'user':
+      default:
+        return UserRole.user;
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case UserRole.admin:
+        return 'Admin';
+      case UserRole.user:
+        return 'User';
+    }
+  }
+}
+
 class UserModel {
   final String uid;
   final String email;
@@ -5,6 +32,7 @@ class UserModel {
   final String? address;
   final String? phoneNumber;
   final String? profileImageUrl;
+  final UserRole role;
   final DateTime? createdAt;
   final DateTime? lastLoginAt;
 
@@ -15,6 +43,7 @@ class UserModel {
     this.address,
     this.phoneNumber,
     this.profileImageUrl,
+    this.role = UserRole.user,
     this.createdAt,
     this.lastLoginAt,
   });
@@ -28,6 +57,7 @@ class UserModel {
       'address': address,
       'phoneNumber': phoneNumber,
       'profileImageUrl': profileImageUrl,
+      'role': role.value,
       'createdAt': createdAt?.toIso8601String(),
       'lastLoginAt': lastLoginAt?.toIso8601String(),
       'updatedAt': DateTime.now().toIso8601String(),
@@ -43,6 +73,7 @@ class UserModel {
       address: data['address'],
       phoneNumber: data['phoneNumber'],
       profileImageUrl: data['profileImageUrl'],
+      role: UserRole.fromString(data['role'] ?? 'user'),
       createdAt: data['createdAt'] != null 
           ? DateTime.tryParse(data['createdAt']) 
           : null,
@@ -60,6 +91,7 @@ class UserModel {
     String? address,
     String? phoneNumber,
     String? profileImageUrl,
+    UserRole role = UserRole.user,
   }) {
     return UserModel(
       uid: uid,
@@ -68,6 +100,7 @@ class UserModel {
       address: address,
       phoneNumber: phoneNumber,
       profileImageUrl: profileImageUrl,
+      role: role,
       createdAt: DateTime.now(),
       lastLoginAt: DateTime.now(),
     );
@@ -81,6 +114,7 @@ class UserModel {
     String? address,
     String? phoneNumber,
     String? profileImageUrl,
+    UserRole? role,
     DateTime? createdAt,
     DateTime? lastLoginAt,
   }) {
@@ -91,6 +125,7 @@ class UserModel {
       address: address ?? this.address,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
     );
@@ -118,9 +153,16 @@ class UserModel {
     return email.substring(0, 2).toUpperCase();
   }
 
+  // Role checking methods
+  bool get isAdmin => role == UserRole.admin;
+  bool get isUser => role == UserRole.user;
+
+  // Get role display name
+  String get roleDisplayName => role.displayName;
+
   @override
   String toString() {
-    return 'UserModel(uid: $uid, email: $email, username: $username, address: $address)';
+    return 'UserModel(uid: $uid, email: $email, username: $username, role: ${role.value}, address: $address)';
   }
 
   @override

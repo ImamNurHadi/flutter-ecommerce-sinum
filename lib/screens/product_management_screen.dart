@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/product_model.dart';
+import '../models/user_model.dart';
 import '../services/firebase_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/product_card.dart';
 import 'add_product_screen.dart';
 import 'edit_product_screen.dart';
@@ -15,16 +17,38 @@ class ProductManagementScreen extends StatefulWidget {
 
 class _ProductManagementScreenState extends State<ProductManagementScreen> {
   final FirebaseService _firebaseService = FirebaseService();
+  final AuthService _authService = AuthService();
   List<Product> _products = [];
   bool _isLoading = true;
   String _selectedCategory = 'Semua';
+  UserModel? _currentUser;
 
   final List<String> _categories = ['Semua', 'Cookies', 'Martabak', 'Terangbulan'];
 
   @override
   void initState() {
     super.initState();
-    _loadProducts();
+    _checkAdminAccess();
+  }
+
+  Future<void> _checkAdminAccess() async {
+    try {
+      final userData = await _authService.getCurrentUserData();
+      if (userData == null || !userData.isAdmin) {
+        // User is not admin, redirect to login
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+      
+      setState(() {
+        _currentUser = userData;
+      });
+      
+      _loadProducts();
+    } catch (e) {
+      print('Error checking admin access: $e');
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   Future<void> _loadProducts() async {

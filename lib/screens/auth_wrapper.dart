@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import 'login_screen.dart';
+import 'admin_dashboard.dart';
 import '../main.dart';
 
 class AuthWrapper extends StatefulWidget {
@@ -92,8 +93,17 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
 
         if (snapshot.hasData && snapshot.data != null) {
-          // User is logged in
-          return const MainScreen();
+          // User is logged in, check role
+          if (_currentUser != null) {
+            if (_currentUser!.isAdmin) {
+              return const AdminDashboard();
+            } else {
+              return const MainScreen();
+            }
+          } else {
+            // User data not loaded yet, show loading
+            return const SplashScreen();
+          }
         } else {
           // User is not logged in
           return const LoginScreen();

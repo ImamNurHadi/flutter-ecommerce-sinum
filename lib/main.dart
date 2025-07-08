@@ -11,6 +11,7 @@ import 'package:sinum/screens/product_management_screen.dart';
 import 'package:sinum/screens/auth_wrapper.dart';
 import 'package:sinum/screens/login_screen.dart';
 import 'package:sinum/screens/register_screen.dart';
+import 'package:sinum/screens/admin_dashboard.dart';
 import 'package:sinum/services/firebase_service.dart';
 import 'package:sinum/test_firestore.dart';
 import 'firebase_options.dart';
@@ -44,6 +45,7 @@ class SinumApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/main': (context) => const MainScreen(),
+        '/admin': (context) => const AdminDashboard(),
       },
       debugShowCheckedModeBanner: false,
     );

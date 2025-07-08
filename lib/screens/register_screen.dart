@@ -27,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
+  UserRole _selectedRole = UserRole.user;
   
   @override
   void dispose() {
@@ -62,6 +63,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         phoneNumber: _phoneController.text.trim().isEmpty 
             ? null 
             : _phoneController.text.trim(),
+        role: _selectedRole,
       );
 
       if (result.isSuccess) {
@@ -501,6 +503,98 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ),
                         ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Role Selection
+                      const Text(
+                        'Pilih Role *',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF2D2D2D),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: _selectedRole == UserRole.user 
+                                      ? const Color(0xFFFF6B35) 
+                                      : Colors.grey[300]!,
+                                  width: _selectedRole == UserRole.user ? 2 : 1,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                color: _selectedRole == UserRole.user
+                                    ? const Color(0xFFFF6B35).withOpacity(0.1)
+                                    : Colors.white,
+                              ),
+                              child: RadioListTile<UserRole>(
+                                value: UserRole.user,
+                                groupValue: _selectedRole,
+                                onChanged: _isLoading ? null : (value) {
+                                  setState(() {
+                                    _selectedRole = value!;
+                                  });
+                                },
+                                title: const Text(
+                                  'User',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Untuk berbelanja',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                activeColor: const Color(0xFFFF6B35),
+                                dense: true,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: _selectedRole == UserRole.admin 
+                                      ? const Color(0xFFFF6B35) 
+                                      : Colors.grey[300]!,
+                                  width: _selectedRole == UserRole.admin ? 2 : 1,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                color: _selectedRole == UserRole.admin
+                                    ? const Color(0xFFFF6B35).withOpacity(0.1)
+                                    : Colors.white,
+                              ),
+                              child: RadioListTile<UserRole>(
+                                value: UserRole.admin,
+                                groupValue: _selectedRole,
+                                onChanged: _isLoading ? null : (value) {
+                                  setState(() {
+                                    _selectedRole = value!;
+                                  });
+                                },
+                                title: const Text(
+                                  'Admin',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Untuk mengelola toko',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                activeColor: const Color(0xFFFF6B35),
+                                dense: true,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 20),

@@ -33,6 +33,7 @@ class AuthService {
     required String username,
     String? address,
     String? phoneNumber,
+    UserRole role = UserRole.user,
   }) async {
     try {
       print('🔐 Starting registration process...');
@@ -75,6 +76,7 @@ class AuthService {
              username.trim(),
              address: address?.trim(),
              phoneNumber: phoneNumber?.trim(),
+             role: role,
            );
            
            // Save user data to Firestore with retry
@@ -108,6 +110,7 @@ class AuthService {
         username.trim(),
         address: address?.trim(),
         phoneNumber: phoneNumber?.trim(),
+        role: role,
       );
 
       // Save user data to Firestore with retry
@@ -150,6 +153,7 @@ class AuthService {
           username.trim(),
           address: address?.trim(),
           phoneNumber: phoneNumber?.trim(),
+          role: role,
         );
         
         // Try to save user data in background (don't fail if this fails)
@@ -168,7 +172,7 @@ class AuthService {
         
         // For this specific error, try to verify if user was actually created
         print('🔄 Detected Firebase plugin bug, checking if user was created...');
-        final verificationResult = await _verifyRegistrationSuccess(email.trim(), password, username.trim(), address, phoneNumber);
+        final verificationResult = await _verifyRegistrationSuccess(email.trim(), password, username.trim(), address, phoneNumber, role);
         if (verificationResult.isSuccess) {
           return verificationResult;
         }
@@ -224,6 +228,7 @@ class AuthService {
           userCredential.user!.uid,
           userCredential.user!.email ?? email.trim(),
           userCredential.user!.displayName ?? email.split('@')[0],
+          role: UserRole.user,
         );
         await _saveUserToFirestoreWithRetry(newUserModel);
         return AuthResult.success(newUserModel);
@@ -263,6 +268,7 @@ class AuthService {
             currentUser.uid,
             currentUser.email ?? email.trim(),
             currentUser.displayName ?? email.split('@')[0],
+            role: UserRole.user,
           );
           
           return AuthResult.success(newUserModel);
@@ -274,6 +280,7 @@ class AuthService {
             currentUser.uid,
             currentUser.email ?? email.trim(),
             currentUser.displayName ?? email.split('@')[0],
+            role: UserRole.user,
           );
           
           return AuthResult.success(userModel);
@@ -533,6 +540,7 @@ class AuthService {
     String username,
     String? address,
     String? phoneNumber,
+    UserRole role,
   ) async {
     try {
       print('🔍 Verifying registration success by attempting login...');
