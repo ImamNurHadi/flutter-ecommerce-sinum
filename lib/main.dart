@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sinum/models/product_model.dart';
 import 'package:sinum/widgets/product_card.dart';
 import 'package:sinum/screens/search_screen.dart';
 import 'package:sinum/screens/cart_screen.dart';
 import 'package:sinum/screens/profile_screen.dart';
 import 'package:sinum/screens/add_product_screen.dart';
-import 'package:sinum/screens/product_management_screen.dart';
 import 'package:sinum/screens/auth_wrapper.dart';
 import 'package:sinum/screens/login_screen.dart';
 import 'package:sinum/screens/register_screen.dart';
 import 'package:sinum/screens/admin_dashboard.dart';
+import 'package:sinum/screens/admin_main_screen.dart';
+import 'package:sinum/screens/transaction_screen.dart';
+import 'package:sinum/screens/debug_transaction_screen.dart';
+import 'package:sinum/screens/admin_transaction_management_screen.dart';
 import 'package:sinum/services/firebase_service.dart';
-import 'package:sinum/test_firestore.dart';
+import 'package:sinum/services/auth_service.dart';
+import 'package:sinum/services/cart_service.dart';
+import 'package:sinum/models/user_model.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -46,6 +50,10 @@ class SinumApp extends StatelessWidget {
         '/register': (context) => const RegisterScreen(),
         '/main': (context) => const MainScreen(),
         '/admin': (context) => const AdminDashboard(),
+        '/admin-main': (context) => const AdminMainScreen(),
+        '/transactions': (context) => const TransactionScreen(),
+        '/debug-transaction': (context) => const DebugTransactionScreen(),
+        '/admin-transactions': (context) => const AdminTransactionManagementScreen(),
       },
       debugShowCheckedModeBanner: false,
     );
@@ -61,17 +69,130 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  final AuthService _authService = AuthService();
+  final CartService _cartService = CartService();
+  bool _isLoading = true;
+  int _cartItemCount = 0;
 
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const SearchScreen(),
-    const ProductManagementScreen(),
-    const CartScreen(),
-    const ProfileScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh cart count when returning to app
+    _updateCartCount();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final userData = await _authService.getCurrentUserData();
+      if (userData != null) {
+        final cartCount = await _cartService.getCartItemCount(userData.uid);
+        setState(() {
+          _cartItemCount = cartCount;
+        });
+      }
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading user data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateCartCount() async {
+    try {
+      final userData = await _authService.getCurrentUserData();
+      if (userData != null) {
+        final cartCount = await _cartService.getCartItemCount(userData.uid);
+        setState(() {
+          _cartItemCount = cartCount;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error updating cart count: $e');
+    }
+  }
+
+  List<Widget> get _screens {
+    return [
+      const HomeScreen(),
+      const SearchScreen(),
+      const CartScreen(),
+      const ProfileScreen(),
+    ];
+  }
+
+  List<BottomNavigationBarItem> get _navItems {
+    return [
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.home),
+        label: 'Home',
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.search),
+        label: 'Search',
+      ),
+      BottomNavigationBarItem(
+        icon: Stack(
+          children: [
+            const Icon(Icons.shopping_cart),
+            if (_cartItemCount > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: Text(
+                    '$_cartItemCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        label: 'Cart',
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.person),
+        label: 'Profile',
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8F9FA),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFFFF6B35),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
@@ -80,32 +201,13 @@ class _MainScreenState extends State<MainScreen> {
           setState(() {
             _currentIndex = index;
           });
+          // Update cart count when navigating to or from cart screen
+          _updateCartCount();
         },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFFFF6B35),
         unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.inventory),
-            label: 'Products',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
-            label: 'Cart',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+        items: _navItems,
       ),
     );
   }
@@ -141,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
         isLoading = false;
       });
     } catch (e) {
-      print('Error loading products: $e');
+      debugPrint('Error loading products: $e');
       setState(() {
         isLoading = false;
         // Fallback to hardcoded data jika Firebase gagal
@@ -235,25 +337,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          // Navigate to Add Product Screen
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AddProductScreen(),
-            ),
-          );
-          
-          // Refresh products if new product was added
-          if (result == true) {
-            loadProducts();
-          }
-        },
-        backgroundColor: const Color(0xFFFF6B35),
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -305,7 +388,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Text(
                                   'Jakarta, Indonesia',
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.white.withValues(alpha: 0.9),
                                     fontSize: 14,
                                   ),
                                 ),
@@ -316,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -340,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       'Delicious food delivered to your door',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 16,
                       ),
                     ),
@@ -391,7 +474,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               border: Border.all(
                                   color: index == selectedCategoryIndex
                                     ? const Color(0xFFFF6B35)
-                                    : Colors.grey.withOpacity(0.3),
+                                    : Colors.grey.withValues(alpha: 0.3),
                               ),
                             ),
                             child: Text(
@@ -431,55 +514,22 @@ class _HomeScreenState extends State<HomeScreen> {
                             color: Color(0xFF2D2D2D),
                           ),
                         ),
-                        Row(
-                          children: [
-                            TextButton.icon(
-                              onPressed: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const AddProductScreen(),
-                                  ),
-                                );
-                                if (result == true) {
-                                  loadProducts();
-                                }
-                              },
-                              style: TextButton.styleFrom(
-                                foregroundColor: const Color(0xFFFF6B35),
-                                backgroundColor: const Color(0xFFFF6B35).withOpacity(0.1),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              icon: const Icon(Icons.add, size: 16),
-                              label: const Text(
-                                'Tambah',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                        TextButton(
+                          onPressed: () {},
+                          child: const Text(
+                            'See All',
+                            style: TextStyle(
+                              color: Color(0xFFFF6B35),
+                              fontWeight: FontWeight.w600,
                             ),
-                            const SizedBox(width: 8),
-                            TextButton(
-                              onPressed: () {},
-                              child: const Text(
-                                'See All',
-                                style: TextStyle(
-                                  color: Color(0xFFFF6B35),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
                     // Loading state
                     if (isLoading)
-                      Container(
+                      SizedBox(
                         height: 200,
                         child: const Center(
                           child: Column(
@@ -531,39 +581,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 allProducts.isEmpty 
-                                    ? 'Tap tombol + untuk menambahkan produk pertama'
-                                    : 'Coba kategori lain atau tambahkan produk baru',
+                                    ? 'Belum ada produk tersedia'
+                                    : 'Coba kategori lain',
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
-                              if (allProducts.isEmpty) ...[
-                                const SizedBox(height: 16),
-                                ElevatedButton.icon(
-                                  onPressed: () async {
-                                    final result = await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const AddProductScreen(),
-                                      ),
-                                    );
-                                    if (result == true) {
-                                      loadProducts();
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFFF6B35),
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Tambah Produk'),
-                                ),
-                              ],
                             ],
                           ),
                         ),

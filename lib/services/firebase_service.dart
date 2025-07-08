@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image/image.dart' as img;
 import '../models/product_model.dart';
+import '../models/transaction_model.dart' as app;
 
 class FirebaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -15,6 +16,7 @@ class FirebaseService {
   // Collection references
   CollectionReference get _productsCollection => _firestore.collection('products');
   CollectionReference get _categoriesCollection => _firestore.collection('categories');
+  CollectionReference get _transactionsCollection => _firestore.collection('transactions');
 
   // GET: Stream semua products (Real-time)
   Stream<List<Product>> getProducts() {
@@ -392,6 +394,250 @@ class FirebaseService {
       log('All products cleared successfully');
     } catch (e) {
       log('Error clearing products: $e');
+    }
+  }
+
+  // ============ TRANSACTION METHODS ============
+
+  // POST: Create new transaction
+  Future<String?> createTransaction(app.Transaction transaction) async {
+    await _ensureAuthentication(allowGuest: false); // Require authentication
+    try {
+      log('🔥 FIREBASE: Creating new transaction...');
+      log('📋 User ID: ${transaction.userId}');
+      log('📝 Items count: ${transaction.items.length}');
+      log('💰 Total amount: ${transaction.totalAmount}');
+      
+      final firestoreData = transaction.toFirestore();
+      log('📄 Firestore data prepared: ${firestoreData.keys.join(', ')}');
+      
+      final docRef = await _transactionsCollection
+          .add(firestoreData)
+          .timeout(Duration(seconds: 15), onTimeout: () {
+            log('❌ FIREBASE: Transaction creation timeout after 15 seconds');
+            throw Exception('Transaction creation timeout after 15 seconds');
+          });
+      
+      log('✅ FIREBASE: Transaction created successfully with ID: ${docRef.id}');
+      
+      // Verify the transaction was saved correctly
+      final savedDoc = await docRef.get();
+      if (savedDoc.exists) {
+        log('✅ FIREBASE: Transaction verification successful');
+        final savedData = savedDoc.data() as Map<String, dynamic>;
+        log('📊 FIREBASE: Saved transaction userId: ${savedData['userId']}');
+        log('📊 FIREBASE: Saved transaction total: ${savedData['totalAmount']}');
+      } else {
+        log('❌ FIREBASE: Transaction verification failed - document does not exist');
+      }
+      
+      return docRef.id;
+    } catch (e) {
+      log('❌ FIREBASE: Error creating transaction: $e');
+      log('❌ FIREBASE: Error type: ${e.runtimeType}');
+      
+      if (e.toString().contains('permission-denied')) {
+        log('❌ FIREBASE: Permission denied error');
+        throw Exception('Permission denied - check Firestore rules');
+      } else if (e.toString().contains('network-request-failed')) {
+        log('❌ FIREBASE: Network error');
+        throw Exception('Network error - check internet connection');
+      } else if (e.toString().contains('timeout')) {
+        log('❌ FIREBASE: Timeout error');
+        throw Exception('Request timeout - try again');
+      } else {
+        log('❌ FIREBASE: Unknown error: ${e.toString()}');
+        throw Exception('Firebase error: ${e.toString()}');
+      }
+    }
+  }
+
+  // GET: Get user transactions
+  Future<List<app.Transaction>> getUserTransactions(String userId) async {
+    await _ensureAuthentication(allowGuest: true);
+    try {
+      log('🔥 FIREBASE: Getting user transactions for userId: $userId');
+      
+      final snapshot = await _transactionsCollection
+          .where('userId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .get()
+          .timeout(Duration(seconds: 10), onTimeout: () {
+            log('❌ FIREBASE: Get transactions timeout after 10 seconds');
+            throw Exception('Get transactions timeout after 10 seconds');
+          });
+      
+      log('📊 FIREBASE: Found ${snapshot.docs.length} transaction documents');
+      
+      final transactions = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        log('📄 FIREBASE: Processing transaction ${doc.id}');
+        log('📊 FIREBASE: Transaction data keys: ${data.keys.join(', ')}');
+        return app.Transaction.fromFirestore(data, doc.id);
+      }).toList();
+      
+      log('✅ FIREBASE: Successfully parsed ${transactions.length} transactions');
+      for (var transaction in transactions) {
+        log('  - ${transaction.transactionNumber}: ${transaction.totalAmount} (${transaction.status.displayName})');
+      }
+      
+      return transactions;
+    } catch (e) {
+      log('❌ FIREBASE: Error getting user transactions: $e');
+      log('❌ FIREBASE: Error type: ${e.runtimeType}');
+      return [];
+    }
+  }
+
+  // GET: Stream user transactions (Real-time)
+  Stream<List<app.Transaction>> getUserTransactionsStream(String userId) {
+    return _transactionsCollection
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return app.Transaction.fromFirestore(data, doc.id);
+      }).toList();
+    });
+  }
+
+  // GET: Get all transactions (Admin only)
+  Future<List<app.Transaction>> getAllTransactions() async {
+    await _ensureAuthentication(allowGuest: true);
+    try {
+      final snapshot = await _transactionsCollection
+          .orderBy('createdAt', descending: true)
+          .get()
+          .timeout(Duration(seconds: 10), onTimeout: () {
+            throw Exception('Get all transactions timeout after 10 seconds');
+          });
+      
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return app.Transaction.fromFirestore(data, doc.id);
+      }).toList();
+    } catch (e) {
+      log('Error getting all transactions: $e');
+      return [];
+    }
+  }
+
+  // GET: Stream all transactions (Admin only - Real-time)
+  Stream<List<app.Transaction>> getAllTransactionsStream() {
+    return _transactionsCollection
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return app.Transaction.fromFirestore(data, doc.id);
+      }).toList();
+    });
+  }
+
+  // PUT: Update transaction status
+  Future<bool> updateTransactionStatus(String transactionId, app.TransactionStatus status) async {
+    try {
+      final updateData = {
+        'status': status.value,
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      };
+
+      // Add deliveredAt if status is delivered
+      if (status == app.TransactionStatus.delivered) {
+        updateData['deliveredAt'] = Timestamp.fromDate(DateTime.now());
+      }
+
+      await _transactionsCollection
+          .doc(transactionId)
+          .update(updateData)
+          .timeout(Duration(seconds: 10), onTimeout: () {
+            throw Exception('Update transaction status timeout after 10 seconds');
+          });
+      
+      log('Transaction status updated successfully');
+      return true;
+    } catch (e) {
+      log('Error updating transaction status: $e');
+      return false;
+    }
+  }
+
+  // GET: Get transaction by ID
+  Future<app.Transaction?> getTransactionById(String transactionId) async {
+    try {
+      final doc = await _transactionsCollection
+          .doc(transactionId)
+          .get()
+          .timeout(Duration(seconds: 10), onTimeout: () {
+            throw Exception('Get transaction timeout after 10 seconds');
+          });
+      
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data() as Map<String, dynamic>;
+        return app.Transaction.fromFirestore(data, doc.id);
+      }
+      return null;
+    } catch (e) {
+      log('Error getting transaction by ID: $e');
+      return null;
+    }
+  }
+
+  // DELETE: Cancel transaction (if allowed)
+  Future<bool> cancelTransaction(String transactionId) async {
+    try {
+      await _transactionsCollection
+          .doc(transactionId)
+          .update({
+            'status': app.TransactionStatus.cancelled.value,
+            'updatedAt': Timestamp.fromDate(DateTime.now()),
+          })
+          .timeout(Duration(seconds: 10), onTimeout: () {
+            throw Exception('Cancel transaction timeout after 10 seconds');
+          });
+      
+      log('Transaction cancelled successfully');
+      return true;
+    } catch (e) {
+      log('Error cancelling transaction: $e');
+      return false;
+    }
+  }
+
+  // UTILITY: Get transaction statistics
+  Future<Map<String, dynamic>> getTransactionStatistics() async {
+    try {
+      final snapshot = await _transactionsCollection.get();
+      
+      int totalTransactions = snapshot.docs.length;
+      double totalRevenue = 0;
+      Map<String, int> statusCounts = {};
+      
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final transaction = app.Transaction.fromFirestore(data, doc.id);
+        
+        totalRevenue += transaction.totalAmount;
+        
+        final status = transaction.status.value;
+        statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+      }
+      
+      return {
+        'totalTransactions': totalTransactions,
+        'totalRevenue': totalRevenue,
+        'statusCounts': statusCounts,
+      };
+    } catch (e) {
+      log('Error getting transaction statistics: $e');
+      return {
+        'totalTransactions': 0,
+        'totalRevenue': 0.0,
+        'statusCounts': <String, int>{},
+      };
     }
   }
 } 

@@ -3,11 +3,23 @@ import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:sinum/screens/product_detail_screen.dart';
 import '../models/product_model.dart';
+import '../services/auth_service.dart';
+import '../services/cart_service.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
 
   const ProductCard({super.key, required this.product});
+
+  Future<bool> _isAdminUser() async {
+    try {
+      final authService = AuthService();
+      final currentUser = await authService.getCurrentUserData();
+      return currentUser?.isAdmin ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
 
   static Widget buildProductImage(Product product) {
     try {
@@ -319,36 +331,119 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                // Add to Cart Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 28,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${product.name} added to cart!'),
-                          backgroundColor: const Color(0xFFFF6B35),
-                          duration: const Duration(seconds: 2),
+                // Add to Cart Button (Only show for non-admin users)
+                FutureBuilder<bool>(
+                  future: _isAdminUser(),
+                  builder: (context, snapshot) {
+                    final isAdmin = snapshot.data ?? false;
+                    
+                    if (isAdmin) {
+                      // Show View Details button for admin
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 28,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ProductDetailScreen(product: product),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                          ),
+                          child: const Text(
+                            'Lihat Detail',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6B35),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                    ),
-                    child: const Text(
-                      'Add to Cart',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                    } else {
+                      // Show Add to Cart button for regular users
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 28,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            try {
+                              final authService = AuthService();
+                              final cartService = CartService();
+                              
+                              // Get current user
+                              final currentUser = await authService.getCurrentUserData();
+                              
+                              if (currentUser == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Silakan login terlebih dahulu'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                Navigator.pushNamed(context, '/login');
+                                return;
+                              }
+                              
+                              // Add item to cart
+                              final success = await cartService.addItemToCart(
+                                currentUser.uid,
+                                product,
+                                quantity: 1,
+                              );
+                              
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('${product.name} ditambahkan ke keranjang!'),
+                                    backgroundColor: const Color(0xFFFF6B35),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Gagal menambahkan ke keranjang'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: ${e.toString()}'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF6B35),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                          ),
+                          child: const Text(
+                            'Add to Cart',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  },
                 ),
               ],
             ),

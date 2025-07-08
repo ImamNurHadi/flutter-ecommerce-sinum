@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 
 class AuthService {
@@ -25,6 +26,43 @@ class AuthService {
 
   // Current user ID
   String? get currentUserId => _auth.currentUser?.uid;
+
+  // CACHE METHODS for role persistence
+  Future<void> _cacheUserRole(String uid, UserRole role) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_role_$uid', role.value);
+      await prefs.setString('cached_user_uid', uid);
+      debugPrint('✅ User role cached: $uid -> ${role.value}');
+    } catch (e) {
+      debugPrint('⚠️ Failed to cache user role: $e');
+    }
+  }
+
+  Future<UserRole?> _getCachedUserRole(String uid) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final roleString = prefs.getString('user_role_$uid');
+      if (roleString != null) {
+        final role = UserRole.fromString(roleString);
+        debugPrint('✅ User role loaded from cache: $uid -> ${role.value}');
+        return role;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to load cached user role: $e');
+    }
+    return null;
+  }
+
+  Future<void> _clearUserCache(String uid) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('user_role_$uid');
+      debugPrint('✅ User role cache cleared for: $uid');
+    } catch (e) {
+      debugPrint('⚠️ Failed to clear user cache: $e');
+    }
+  }
 
   // REGISTER with email and password
   Future<AuthResult> registerWithEmailAndPassword({
@@ -367,11 +405,45 @@ class AuthService {
     return null;
   }
 
-  // GET CURRENT USER DATA
+  // ENHANCED GET CURRENT USER DATA with caching
   Future<UserModel?> getCurrentUserData() async {
     final user = _auth.currentUser;
     if (user == null) return null;
-    return await getUserData(user.uid);
+
+    try {
+      // Try to get from Firestore first
+      final userData = await getUserData(user.uid);
+      if (userData != null) {
+        // Cache the role for future use
+        await _cacheUserRole(user.uid, userData.role);
+        return userData;
+      }
+
+      // If Firestore fails, try to get cached role
+      debugPrint('⚠️ Firestore failed, trying cached role...');
+      final cachedRole = await _getCachedUserRole(user.uid);
+      if (cachedRole != null) {
+        debugPrint('✅ Using cached role: ${cachedRole.value}');
+        return UserModel.fromFirebaseUser(
+          user.uid,
+          user.email ?? '',
+          user.displayName ?? 'User',
+          role: cachedRole,
+        );
+      }
+
+      // Last resort: create minimal user with default role
+      debugPrint('⚠️ No cached role found, using default user role');
+      return UserModel.fromFirebaseUser(
+        user.uid,
+        user.email ?? '',
+        user.displayName ?? 'User',
+        role: UserRole.user,
+      );
+    } catch (e) {
+      debugPrint('❌ Error in getCurrentUserData: $e');
+      return null;
+    }
   }
 
   // UPDATE USER PROFILE

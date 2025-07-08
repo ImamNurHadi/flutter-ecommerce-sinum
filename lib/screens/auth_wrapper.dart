@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import 'login_screen.dart';
-import 'admin_dashboard.dart';
+import 'admin_main_screen.dart';
 import '../main.dart';
 
 class AuthWrapper extends StatefulWidget {
@@ -17,6 +17,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   final _authService = AuthService();
   UserModel? _currentUser;
   bool _isLoading = true;
+  bool _showDebugInfo = false;
 
   @override
   void initState() {
@@ -33,17 +34,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
       final user = _authService.currentUser;
       
       if (user != null && !user.isAnonymous) {
-        print('🔍 Authenticated user found: ${user.uid}');
+        debugPrint('🔍 Authenticated user found: ${user.uid}');
         
         // User is logged in, get user data with retry
         try {
           final userData = await _authService.getCurrentUserData();
+          debugPrint('✅ User data loaded: ${userData?.email}, isAdmin: ${userData?.isAdmin}');
           setState(() {
             _currentUser = userData;
             _isLoading = false;
           });
         } catch (e) {
-          print('⚠️ Error getting user data, but user is authenticated: $e');
+          debugPrint('⚠️ Error getting user data, but user is authenticated: $e');
           
           // Create minimal user model from Firebase user
           final minimalUser = UserModel.fromFirebaseUser(
@@ -52,6 +54,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
             user.displayName ?? 'User',
           );
           
+          debugPrint('📝 Created minimal user: ${minimalUser.email}, isAdmin: ${minimalUser.isAdmin}');
           setState(() {
             _currentUser = minimalUser;
             _isLoading = false;
@@ -59,18 +62,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
       } else {
         // User is not logged in or is anonymous
-        print('🔍 No authenticated user found');
+        debugPrint('🔍 No authenticated user found');
         setState(() {
           _currentUser = null;
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('❌ Error checking auth status: $e');
-      
-      // Fallback: try to check one more time after delay
-      await Future.delayed(const Duration(seconds: 1));
-      final fallbackUser = _authService.currentUser;
+      debugPrint('❌ Error checking auth status: $e');
       
       setState(() {
         _currentUser = null;
@@ -85,6 +84,52 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return const SplashScreen();
     }
 
+    // Debug overlay button
+    if (_showDebugInfo && _currentUser != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Debug Info',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              Text('User: ${_currentUser!.email}'),
+              Text('Role: ${_currentUser!.role}'),
+              Text('Is Admin: ${_currentUser!.isAdmin}'),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _showDebugInfo = false;
+                  });
+                },
+                child: const Text('Continue'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  await _authService.logout();
+                  setState(() {
+                    _currentUser = null;
+                    _showDebugInfo = false;
+                  });
+                },
+                child: const Text('Logout & Refresh'),
+              ),
+            ],
+          ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () async {
+            await _checkAuthStatus();
+          },
+          child: const Icon(Icons.refresh),
+        ),
+      );
+    }
+
     return StreamBuilder<User?>(
       stream: _authService.authStateChanges,
       builder: (context, snapshot) {
@@ -95,17 +140,26 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (snapshot.hasData && snapshot.data != null) {
           // User is logged in, check role
           if (_currentUser != null) {
+            debugPrint('🔍 User role check - isAdmin: ${_currentUser!.isAdmin}');
+            debugPrint('🔍 User role: ${_currentUser!.role}');
+            debugPrint('🔍 User email: ${_currentUser!.email}');
+            
             if (_currentUser!.isAdmin) {
-              return const AdminDashboard();
+              debugPrint('✅ Redirecting to AdminMainScreen');
+              return const AdminMainScreen();
             } else {
+              debugPrint('✅ Redirecting to MainScreen');
               return const MainScreen();
             }
           } else {
-            // User data not loaded yet, show loading
+            // User data not loaded yet, refresh user data
+            debugPrint('⏳ User data not loaded yet, refreshing...');
+            _checkAuthStatus();
             return const SplashScreen();
           }
         } else {
           // User is not logged in
+          debugPrint('🚫 User not logged in, showing login');
           return const LoginScreen();
         }
       },
@@ -120,7 +174,19 @@ class SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFF6B35),
-      body: Center(
+      body: GestureDetector(
+        onLongPress: () {
+          if (context.mounted) {
+            // Find the _AuthWrapperState and trigger debug mode
+            final state = context.findAncestorStateOfType<_AuthWrapperState>();
+            if (state != null) {
+              state.setState(() {
+                state._showDebugInfo = true;
+              });
+            }
+          }
+        },
+        child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -191,6 +257,7 @@ class SplashScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

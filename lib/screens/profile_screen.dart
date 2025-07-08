@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
+import 'transaction_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -262,12 +263,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   _buildMenuItem(
                     icon: Icons.history,
-                    title: 'Order History',
+                    title: 'Histori Pembelian',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Order history coming soon!'),
-                          backgroundColor: Color(0xFFFF6B35),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TransactionScreen(),
                         ),
                       );
                     },

@@ -91,11 +91,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('❌ Gagal autentikasi: ${e.toString()}'),
-              backgroundColor: Colors.red,
+          backgroundColor: Colors.red,
               duration: Duration(seconds: 3),
-            ),
-          );
-          return;
+        ),
+      );
+      return;
         } else {
           print('✅ User found after retry: ${retryUser.uid}');
         }
@@ -130,33 +130,33 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
       final productId = await _firebaseService.addProduct(product, imageFile: _selectedImage);
 
-      setState(() {
-        _loadingMessage = 'Menyimpan ke database...';
-      });
-      
-      await Future.delayed(const Duration(milliseconds: 300)); // Small delay for UI
-      
-      // Success
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Produk berhasil ditambahkan!'),
-          backgroundColor: Color(0xFFFF6B35),
-          duration: Duration(seconds: 2),
-        ),
-      );
+        setState(() {
+          _loadingMessage = 'Menyimpan ke database...';
+        });
+        
+        await Future.delayed(const Duration(milliseconds: 300)); // Small delay for UI
+        
+        // Success
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Produk berhasil ditambahkan!'),
+            backgroundColor: Color(0xFFFF6B35),
+            duration: Duration(seconds: 2),
+          ),
+        );
 
-      // Clear form
-      _nameController.clear();
-      _descriptionController.clear();
-      _priceController.clear();
-      setState(() {
-        _selectedCategory = 'Cookies';
-        _isChilled = false;
-        _selectedImage = null;
-      });
+        // Clear form
+        _nameController.clear();
+        _descriptionController.clear();
+        _priceController.clear();
+        setState(() {
+          _selectedCategory = 'Cookies';
+          _isChilled = false;
+          _selectedImage = null;
+        });
 
-      // Go back
-      Navigator.pop(context, true); // Return true untuk refresh home screen
+        // Go back
+        Navigator.pop(context, true); // Return true untuk refresh home screen
     } catch (e) {
       String errorMessage = 'Terjadi kesalahan yang tidak diketahui';
       
