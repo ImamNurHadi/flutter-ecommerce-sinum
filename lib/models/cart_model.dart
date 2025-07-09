@@ -85,8 +85,8 @@ class Cart {
   });
 
   // Calculated properties
-  double get totalAmount => items.fold(0, (sum, item) => sum + item.subtotal);
-  int get totalItems => items.fold(0, (sum, item) => sum + item.quantity);
+  double get totalAmount => items.fold(0, (total, item) => total + item.subtotal);
+  int get totalItems => items.fold(0, (total, item) => total + item.quantity);
   int get totalProducts => items.length;
   bool get isEmpty => items.isEmpty;
   bool get isNotEmpty => items.isNotEmpty;

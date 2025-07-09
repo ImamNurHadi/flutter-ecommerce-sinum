@@ -594,15 +594,15 @@ class _CartScreenState extends State<CartScreen> {
                                     await _showDeleteConfirmationDialog(item);
                                   }
                                 }
-                              },
-                              child: Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(Icons.remove, size: 18),
+                          },
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.remove, size: 18),
                           ),
                         ),
                         Container(

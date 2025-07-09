@@ -74,19 +74,19 @@ class AuthService {
     UserRole role = UserRole.user,
   }) async {
     try {
-      print('🔐 Starting registration process...');
+      debugPrint('🔐 Starting registration process...');
       
       // Check if user already exists first
       final existingUser = await _checkIfUserExists(email.trim());
       if (existingUser != null) {
-        print('✅ User already exists, performing login instead...');
+        debugPrint('✅ User already exists, performing login instead...');
         return await loginWithEmailAndPassword(email: email, password: password);
       }
       
       // Clear any existing anonymous session first
       final currentUser = _auth.currentUser;
       if (currentUser != null && currentUser.isAnonymous) {
-        print('🔄 Clearing existing anonymous session...');
+        debugPrint('🔄 Clearing existing anonymous session...');
         await _auth.signOut();
         await Future.delayed(const Duration(milliseconds: 500));
       }
@@ -98,9 +98,9 @@ class AuthService {
           email: email.trim(),
           password: password,
         );
-        print('✅ Firebase user created: ${userCredential.user?.uid}');
+        debugPrint('✅ Firebase user created: ${userCredential.user?.uid}');
       } catch (e) {
-        print('❌ Firebase Auth Error during creation: $e');
+        debugPrint('❌ Firebase Auth Error during creation: $e');
         // Check if user was actually created despite error
         await Future.delayed(const Duration(milliseconds: 1000));
         final newCurrentUser = _auth.currentUser;
@@ -345,11 +345,46 @@ class AuthService {
   Future<void> logout() async {
     try {
       print('🔐 Logging out user...');
+      
+      // Clear cache before logout
+      final currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        await _clearUserCache(currentUser.uid);
+      }
+      
       await _auth.signOut();
       print('✅ User logged out successfully');
     } catch (e) {
       print('❌ Logout error: $e');
       throw Exception('Gagal logout: ${e.toString()}');
+    }
+  }
+
+  // FORCE REFRESH USER DATA (clear cache and reload)
+  Future<UserModel?> forceRefreshUserData() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    try {
+      debugPrint('🔄 Force refreshing user data...');
+      
+      // Clear cache first
+      await _clearUserCache(user.uid);
+      
+      // Get fresh data from Firestore
+      final userData = await getUserData(user.uid);
+      if (userData != null) {
+        // Cache the fresh role
+        await _cacheUserRole(user.uid, userData.role);
+        debugPrint('✅ User data force refreshed: ${userData.email}, isAdmin: ${userData.isAdmin}');
+        return userData;
+      }
+
+      debugPrint('⚠️ No user data found in Firestore during force refresh');
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error in forceRefreshUserData: $e');
+      return null;
     }
   }
 

@@ -340,10 +340,10 @@ class ProductCard extends StatelessWidget {
                     if (isAdmin) {
                       // Show View Details button for admin
                       return SizedBox(
-                        width: double.infinity,
-                        height: 28,
-                        child: ElevatedButton(
-                          onPressed: () {
+                  width: double.infinity,
+                  height: 28,
+                  child: ElevatedButton(
+                    onPressed: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -401,13 +401,13 @@ class ProductCard extends StatelessWidget {
                               );
                               
                               if (success) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
                                     content: Text('${product.name} ditambahkan ke keranjang!'),
-                                    backgroundColor: const Color(0xFFFF6B35),
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
+                          backgroundColor: const Color(0xFFFF6B35),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -424,23 +424,23 @@ class ProductCard extends StatelessWidget {
                                 ),
                               );
                             }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF6B35),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                          ),
-                          child: const Text(
-                            'Add to Cart',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF6B35),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                    ),
+                    child: const Text(
+                      'Add to Cart',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                       );
                     }
                   },

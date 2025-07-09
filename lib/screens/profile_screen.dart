@@ -145,9 +145,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: const TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                      color: Colors.white,
                             ),
-                          ),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(

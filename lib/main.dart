@@ -5,7 +5,6 @@ import 'package:sinum/widgets/product_card.dart';
 import 'package:sinum/screens/search_screen.dart';
 import 'package:sinum/screens/cart_screen.dart';
 import 'package:sinum/screens/profile_screen.dart';
-import 'package:sinum/screens/add_product_screen.dart';
 import 'package:sinum/screens/auth_wrapper.dart';
 import 'package:sinum/screens/login_screen.dart';
 import 'package:sinum/screens/register_screen.dart';
@@ -17,7 +16,6 @@ import 'package:sinum/screens/admin_transaction_management_screen.dart';
 import 'package:sinum/services/firebase_service.dart';
 import 'package:sinum/services/auth_service.dart';
 import 'package:sinum/services/cart_service.dart';
-import 'package:sinum/models/user_model.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -29,33 +27,63 @@ void main() async {
   runApp(const SinumApp());
 }
 
+// Global app refresh mechanism
+class GlobalAppRefresh {
+  static GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static ValueNotifier<int> refreshNotifier = ValueNotifier(0);
+  
+  static void forceRefreshApp() {
+    debugPrint('🔄 GlobalAppRefresh: Force refresh app called');
+    refreshNotifier.value++;
+    
+    // Also try to navigate to fresh AuthWrapper
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      debugPrint('🔄 GlobalAppRefresh: Navigating to fresh AuthWrapper');
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/auth-wrapper', 
+        (route) => false,
+      );
+    }
+  }
+}
+
 class SinumApp extends StatelessWidget {
   const SinumApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Sinum - Food Delivery',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF6B35), // Orange untuk food app
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        fontFamily: 'Roboto',
-      ),
-      home: const AuthWrapper(),
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
-        '/main': (context) => const MainScreen(),
-        '/admin': (context) => const AdminDashboard(),
-        '/admin-main': (context) => const AdminMainScreen(),
-        '/transactions': (context) => const TransactionScreen(),
-        '/debug-transaction': (context) => const DebugTransactionScreen(),
-        '/admin-transactions': (context) => const AdminTransactionManagementScreen(),
+    return ValueListenableBuilder<int>(
+      valueListenable: GlobalAppRefresh.refreshNotifier,
+      builder: (context, refreshCount, child) {
+        debugPrint('🔄 SinumApp: Rebuilding app (refresh count: $refreshCount)');
+        
+        return MaterialApp(
+          title: 'Sinum - Food Delivery',
+          navigatorKey: GlobalAppRefresh.navigatorKey,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFFFF6B35), // Orange untuk food app
+              brightness: Brightness.light,
+            ),
+            useMaterial3: true,
+            fontFamily: 'Roboto',
+          ),
+          home: AuthWrapper(key: ValueKey('auth_wrapper_$refreshCount')),
+          routes: {
+            '/login': (context) => const LoginScreen(),
+            '/register': (context) => const RegisterScreen(),
+            '/main': (context) => AuthWrapper(key: ValueKey('main_auth_wrapper_${DateTime.now().millisecondsSinceEpoch}')),
+            '/auth-wrapper': (context) => AuthWrapper(key: ValueKey('fresh_auth_wrapper_${DateTime.now().millisecondsSinceEpoch}')),
+            '/admin': (context) => const AdminDashboard(),
+            '/admin-main': (context) => const AdminMainScreen(),
+            '/transactions': (context) => const TransactionScreen(),
+            '/debug-transaction': (context) => const DebugTransactionScreen(),
+            '/admin-transactions': (context) => const AdminTransactionManagementScreen(),
+          },
+          debugShowCheckedModeBanner: false,
+        );
       },
-      debugShowCheckedModeBanner: false,
     );
   }
 }

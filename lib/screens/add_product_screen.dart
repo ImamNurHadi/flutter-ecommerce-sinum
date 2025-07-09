@@ -76,15 +76,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
     // Check authentication (improved handling)
     final user = FirebaseAuth.instance.currentUser;
-    print('🔍 Current user: ${user?.uid ?? 'null'}');
+    debugPrint('🔍 Current user: ${user?.uid ?? 'null'}');
     
     if (user == null) {
-      print('⚠️ User not authenticated, trying to sign in anonymously...');
+      debugPrint('⚠️ User not authenticated, trying to sign in anonymously...');
       try {
         await FirebaseAuth.instance.signInAnonymously();
-        print('✅ Anonymous sign in successful');
+        debugPrint('✅ Anonymous sign in successful');
       } catch (e) {
-        print('❌ Anonymous sign in failed: $e');
+        debugPrint('❌ Anonymous sign in failed: $e');
         // Check again if user is available despite error
         final retryUser = FirebaseAuth.instance.currentUser;
         if (retryUser == null) {
@@ -97,7 +97,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       );
       return;
         } else {
-          print('✅ User found after retry: ${retryUser.uid}');
+          debugPrint('✅ User found after retry: ${retryUser.uid}');
         }
       }
     }
@@ -160,7 +160,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     } catch (e) {
       String errorMessage = 'Terjadi kesalahan yang tidak diketahui';
       
-      print('Save product error: $e'); // Debug print
+      debugPrint('Save product error: $e'); // Debug print
       
       if (e.toString().contains('Permission denied') || e.toString().contains('permission-denied')) {
         errorMessage = 'Tidak memiliki izin - periksa konfigurasi Firebase';

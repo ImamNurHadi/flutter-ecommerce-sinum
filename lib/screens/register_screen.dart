@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
+import 'auth_wrapper.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -71,8 +72,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (mounted) {
           _showSuccessDialog(
             'Pendaftaran berhasil! Selamat datang di Sinum.',
-            () {
+            () async {
+              // Force refresh user data to ensure latest role is loaded
+              await _authService.forceRefreshUserData();
+              
               Navigator.of(context).pushReplacementNamed('/main');
+              
+              // Force refresh the AuthWrapper to pick up the latest user data
+              AuthWrapperRefresh.forceRefresh();
             },
           );
         }
@@ -189,7 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  void _showSuccessDialog(String message, VoidCallback onConfirm) {
+  void _showSuccessDialog(String message, Future<void> Function() onConfirm) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -204,9 +211,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         content: Text(message),
         actions: [
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(context).pop();
-              onConfirm();
+              await onConfirm();
             },
             child: const Text('OK'),
           ),

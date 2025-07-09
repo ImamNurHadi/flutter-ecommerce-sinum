@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import 'register_screen.dart';
+import 'auth_wrapper.dart';
+import 'package:sinum/main.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,15 +41,25 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
+      debugPrint('🔐 Starting login process...');
+      
       final result = await _authService.loginWithEmailAndPassword(
         email: _emailController.text.trim(),
-        password: _passwordController.text,
+        password: _passwordController.text.trim(),
       );
 
       if (result.isSuccess) {
-        // Login successful
+        // Login successful - force refresh AuthWrapper to get latest user data
         if (mounted) {
-          Navigator.of(context).pushReplacementNamed('/main');
+          debugPrint('🔄 LoginScreen: Login successful, forcing app refresh...');
+          
+          // Force refresh user data to ensure latest role is loaded
+          await _authService.forceRefreshUserData();
+          debugPrint('🔄 LoginScreen: Force refresh user data completed');
+          
+          // Use global app refresh mechanism - single refresh only
+          debugPrint('🔄 LoginScreen: Calling GlobalAppRefresh.forceRefreshApp()...');
+          GlobalAppRefresh.forceRefreshApp();
         }
       } else {
         // Login failed

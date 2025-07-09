@@ -195,7 +195,7 @@ class Transaction {
   }
 
   // Helper methods
-  int get totalItems => items.fold(0, (sum, item) => sum + item.quantity);
+  int get totalItems => items.fold(0, (total, item) => total + item.quantity);
   
   bool get isPending => status == TransactionStatus.pending;
   bool get isProcessing => status == TransactionStatus.processing;
