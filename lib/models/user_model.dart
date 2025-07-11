@@ -25,12 +25,94 @@ enum UserRole {
   }
 }
 
+class ContactInfo {
+  final String label;
+  final String phoneNumber;
+  final bool isDefault;
+
+  const ContactInfo({
+    required this.label,
+    required this.phoneNumber,
+    this.isDefault = false,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'label': label,
+      'phoneNumber': phoneNumber,
+      'isDefault': isDefault,
+    };
+  }
+
+  factory ContactInfo.fromMap(Map<String, dynamic> map) {
+    return ContactInfo(
+      label: map['label'] ?? '',
+      phoneNumber: map['phoneNumber'] ?? '',
+      isDefault: map['isDefault'] ?? false,
+    );
+  }
+
+  ContactInfo copyWith({
+    String? label,
+    String? phoneNumber,
+    bool? isDefault,
+  }) {
+    return ContactInfo(
+      label: label ?? this.label,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      isDefault: isDefault ?? this.isDefault,
+    );
+  }
+}
+
+class AddressInfo {
+  final String label;
+  final String address;
+  final bool isDefault;
+
+  const AddressInfo({
+    required this.label,
+    required this.address,
+    this.isDefault = false,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'label': label,
+      'address': address,
+      'isDefault': isDefault,
+    };
+  }
+
+  factory AddressInfo.fromMap(Map<String, dynamic> map) {
+    return AddressInfo(
+      label: map['label'] ?? '',
+      address: map['address'] ?? '',
+      isDefault: map['isDefault'] ?? false,
+    );
+  }
+
+  AddressInfo copyWith({
+    String? label,
+    String? address,
+    bool? isDefault,
+  }) {
+    return AddressInfo(
+      label: label ?? this.label,
+      address: address ?? this.address,
+      isDefault: isDefault ?? this.isDefault,
+    );
+  }
+}
+
 class UserModel {
   final String uid;
   final String email;
   final String username;
-  final String? address;
-  final String? phoneNumber;
+  final String? address; // Keep for backward compatibility
+  final String? phoneNumber; // Keep for backward compatibility
+  final List<ContactInfo> contacts;
+  final List<AddressInfo> addresses;
   final String? profileImageUrl;
   final UserRole role;
   final DateTime? createdAt;
@@ -42,6 +124,8 @@ class UserModel {
     required this.username,
     this.address,
     this.phoneNumber,
+    this.contacts = const [],
+    this.addresses = const [],
     this.profileImageUrl,
     this.role = UserRole.user,
     this.createdAt,
@@ -56,6 +140,8 @@ class UserModel {
       'username': username,
       'address': address,
       'phoneNumber': phoneNumber,
+      'contacts': contacts.map((c) => c.toMap()).toList(),
+      'addresses': addresses.map((a) => a.toMap()).toList(),
       'profileImageUrl': profileImageUrl,
       'role': role.value,
       'createdAt': createdAt?.toIso8601String(),
@@ -66,12 +152,28 @@ class UserModel {
 
   // Create UserModel from Firestore document
   factory UserModel.fromFirestore(Map<String, dynamic> data) {
+    // Parse contacts
+    List<ContactInfo> contacts = [];
+    if (data['contacts'] != null) {
+      final contactsData = data['contacts'] as List<dynamic>;
+      contacts = contactsData.map((c) => ContactInfo.fromMap(c as Map<String, dynamic>)).toList();
+    }
+
+    // Parse addresses
+    List<AddressInfo> addresses = [];
+    if (data['addresses'] != null) {
+      final addressesData = data['addresses'] as List<dynamic>;
+      addresses = addressesData.map((a) => AddressInfo.fromMap(a as Map<String, dynamic>)).toList();
+    }
+
     return UserModel(
       uid: data['uid'] ?? '',
       email: data['email'] ?? '',
       username: data['username'] ?? '',
       address: data['address'],
       phoneNumber: data['phoneNumber'],
+      contacts: contacts,
+      addresses: addresses,
       profileImageUrl: data['profileImageUrl'],
       role: UserRole.fromString(data['role'] ?? 'user'),
       createdAt: data['createdAt'] != null 
@@ -113,6 +215,8 @@ class UserModel {
     String? username,
     String? address,
     String? phoneNumber,
+    List<ContactInfo>? contacts,
+    List<AddressInfo>? addresses,
     String? profileImageUrl,
     UserRole? role,
     DateTime? createdAt,
@@ -124,6 +228,8 @@ class UserModel {
       username: username ?? this.username,
       address: address ?? this.address,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      contacts: contacts ?? this.contacts,
+      addresses: addresses ?? this.addresses,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
@@ -131,9 +237,46 @@ class UserModel {
     );
   }
 
+  // Helper methods for contacts and addresses
+  ContactInfo? get defaultContact {
+    try {
+      return contacts.firstWhere((c) => c.isDefault);
+    } catch (e) {
+      return contacts.isNotEmpty ? contacts.first : null;
+    }
+  }
+
+  AddressInfo? get defaultAddress {
+    try {
+      return addresses.firstWhere((a) => a.isDefault);
+    } catch (e) {
+      return addresses.isNotEmpty ? addresses.first : null;
+    }
+  }
+
+  // Get primary phone number (for backward compatibility)
+  String? get primaryPhoneNumber {
+    return defaultContact?.phoneNumber ?? phoneNumber;
+  }
+
+  // Get primary address (for backward compatibility)
+  String? get primaryAddress {
+    return defaultAddress?.address ?? address;
+  }
+
   // Check if user has complete profile
   bool get isProfileComplete {
     return username.isNotEmpty && email.isNotEmpty;
+  }
+
+  // Check if user has contact info for checkout
+  bool get hasContactInfo {
+    return contacts.isNotEmpty || phoneNumber != null;
+  }
+
+  // Check if user has address info for checkout
+  bool get hasAddressInfo {
+    return addresses.isNotEmpty || address != null;
   }
 
   // Get display name (username or email)
@@ -162,7 +305,7 @@ class UserModel {
 
   @override
   String toString() {
-    return 'UserModel(uid: $uid, email: $email, username: $username, role: ${role.value}, address: $address)';
+    return 'UserModel(uid: $uid, email: $email, username: $username, role: ${role.value}, contacts: ${contacts.length}, addresses: ${addresses.length})';
   }
 
   @override

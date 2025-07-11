@@ -24,7 +24,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
   
   final List<String> _statusFilters = [
     'Semua',
-    'Menunggu Pembayaran',
     'Diproses',
     'Dikirim',
     'Selesai',
@@ -88,9 +87,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
     
     TransactionStatus? filterStatus;
     switch (_selectedFilter) {
-      case 'Menunggu Pembayaran':
-        filterStatus = TransactionStatus.pending;
-        break;
       case 'Diproses':
         filterStatus = TransactionStatus.processing;
         break;
@@ -643,8 +639,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   Color _getStatusColor(TransactionStatus status) {
     switch (status) {
-      case TransactionStatus.pending:
-        return Colors.orange;
       case TransactionStatus.processing:
         return Colors.blue;
       case TransactionStatus.shipped:

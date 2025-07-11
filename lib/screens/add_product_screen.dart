@@ -88,7 +88,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         // Check again if user is available despite error
         final retryUser = FirebaseAuth.instance.currentUser;
         if (retryUser == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('❌ Gagal autentikasi: ${e.toString()}'),
           backgroundColor: Colors.red,

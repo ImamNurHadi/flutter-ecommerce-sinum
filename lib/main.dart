@@ -58,17 +58,17 @@ class SinumApp extends StatelessWidget {
       builder: (context, refreshCount, child) {
         debugPrint('🔄 SinumApp: Rebuilding app (refresh count: $refreshCount)');
         
-        return MaterialApp(
-          title: 'Sinum - Food Delivery',
+    return MaterialApp(
+      title: 'Sinum - Food Delivery',
           navigatorKey: GlobalAppRefresh.navigatorKey,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFFFF6B35), // Orange untuk food app
-              brightness: Brightness.light,
-            ),
-            useMaterial3: true,
-            fontFamily: 'Roboto',
-          ),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFFF6B35), // Orange untuk food app
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+        fontFamily: 'Roboto',
+      ),
           home: AuthWrapper(key: ValueKey('auth_wrapper_$refreshCount')),
           routes: {
             '/login': (context) => const LoginScreen(),
@@ -81,7 +81,7 @@ class SinumApp extends StatelessWidget {
             '/debug-transaction': (context) => const DebugTransactionScreen(),
             '/admin-transactions': (context) => const AdminTransactionManagementScreen(),
           },
-          debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: false,
         );
       },
     );
@@ -151,11 +151,11 @@ class _MainScreenState extends State<MainScreen> {
 
   List<Widget> get _screens {
     return [
-      const HomeScreen(),
-      const SearchScreen(),
-      const CartScreen(),
-      const ProfileScreen(),
-    ];
+    const HomeScreen(),
+    const SearchScreen(),
+    const CartScreen(),
+    const ProfileScreen(),
+  ];
   }
 
   List<BottomNavigationBarItem> get _navItems {

@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart' as app;
-import '../models/user_model.dart';
-import '../services/firebase_service.dart';
-import '../services/auth_service.dart';
 
 class AdminTransactionManagementScreen extends StatefulWidget {
   const AdminTransactionManagementScreen({super.key});
@@ -14,8 +11,6 @@ class AdminTransactionManagementScreen extends StatefulWidget {
 }
 
 class _AdminTransactionManagementScreenState extends State<AdminTransactionManagementScreen> {
-  final FirebaseService _firebaseService = FirebaseService();
-  final AuthService _authService = AuthService();
   List<app.Transaction> _transactions = [];
   bool _isLoading = true;
   String _filterStatus = 'all';
@@ -125,7 +120,6 @@ class _AdminTransactionManagementScreenState extends State<AdminTransactionManag
                   spacing: 8,
                   children: [
                     _buildFilterChip('all', 'Semua'),
-                    _buildFilterChip('pending', 'Pending'),
                     _buildFilterChip('processing', 'Diproses'),
                     _buildFilterChip('shipped', 'Dikirim'),
                     _buildFilterChip('delivered', 'Selesai'),
@@ -379,8 +373,6 @@ class _AdminTransactionManagementScreenState extends State<AdminTransactionManag
 
   Color _getStatusColor(app.TransactionStatus status) {
     switch (status) {
-      case app.TransactionStatus.pending:
-        return Colors.orange;
       case app.TransactionStatus.processing:
         return Colors.blue;
       case app.TransactionStatus.shipped:

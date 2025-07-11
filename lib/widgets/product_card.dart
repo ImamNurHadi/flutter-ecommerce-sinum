@@ -78,11 +78,11 @@ class ProductCard extends StatelessWidget {
       }
       // Default placeholder for empty or invalid imageUrl
       else {
-        print('ProductCard: Using placeholder - imageUrl: "${product.imageUrl}"');
+        debugPrint('ProductCard: Using placeholder - imageUrl: "${product.imageUrl}"');
         return _buildPlaceholderImageStatic();
       }
     } catch (e) {
-      print('ProductCard: General error in buildProductImage: $e');
+      debugPrint('ProductCard: General error in buildProductImage: $e');
       return _buildPlaceholderImageStatic();
     }
   }
@@ -114,16 +114,16 @@ class ProductCard extends StatelessWidget {
   Widget _buildProductImage() {
     try {
       // Debug print
-      print('ProductCard: imageUrl type: ${product.imageUrl.runtimeType}');
-      print('ProductCard: imageUrl length: ${product.imageUrl.length}');
-      print('ProductCard: imageUrl starts with: ${product.imageUrl.length > 50 ? product.imageUrl.substring(0, 50) : product.imageUrl}...');
+      debugPrint('ProductCard: imageUrl type: ${product.imageUrl.runtimeType}');
+      debugPrint('ProductCard: imageUrl length: ${product.imageUrl.length}');
+      debugPrint('ProductCard: imageUrl starts with: ${product.imageUrl.length > 50 ? product.imageUrl.substring(0, 50) : product.imageUrl}...');
       
       // Check if imageUrl is base64 data
       if (product.imageUrl.isNotEmpty && product.imageUrl.startsWith('data:image/')) {
         try {
           final base64Data = product.imageUrl.split(',')[1];
           final bytes = base64Decode(base64Data);
-          print('ProductCard: Base64 decoded successfully, bytes length: ${bytes.length}');
+          debugPrint('ProductCard: Base64 decoded successfully, bytes length: ${bytes.length}');
           
           return Image.memory(
             bytes,
@@ -131,12 +131,12 @@ class ProductCard extends StatelessWidget {
             width: double.infinity,
             height: 110,
             errorBuilder: (context, error, stackTrace) {
-              print('ProductCard: Image.memory error: $error');
+              debugPrint('ProductCard: Image.memory error: $error');
               return _buildPlaceholderImage();
             },
           );
         } catch (e) {
-          print('ProductCard: Base64 decode error: $e');
+          debugPrint('ProductCard: Base64 decode error: $e');
           return _buildPlaceholderImage();
         }
       }
@@ -148,7 +148,7 @@ class ProductCard extends StatelessWidget {
           width: double.infinity,
           height: 110,
           errorBuilder: (context, error, stackTrace) {
-            print('ProductCard: Image.asset error: $error');
+            debugPrint('ProductCard: Image.asset error: $error');
             return _buildPlaceholderImage();
           },
         );
@@ -161,18 +161,18 @@ class ProductCard extends StatelessWidget {
           width: double.infinity,
           height: 110,
           errorBuilder: (context, error, stackTrace) {
-            print('ProductCard: Image.network error: $error');
+            debugPrint('ProductCard: Image.network error: $error');
             return _buildPlaceholderImage();
           },
         );
       }
       // Default placeholder for empty or invalid imageUrl
       else {
-        print('ProductCard: Using placeholder - imageUrl: "${product.imageUrl}"');
+        debugPrint('ProductCard: Using placeholder - imageUrl: "${product.imageUrl}"');
         return _buildPlaceholderImage();
       }
     } catch (e) {
-      print('ProductCard: General error in _buildProductImage: $e');
+      debugPrint('ProductCard: General error in _buildProductImage: $e');
       return _buildPlaceholderImage();
     }
   }
@@ -212,7 +212,7 @@ class ProductCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -277,7 +277,7 @@ class ProductCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: const Icon(

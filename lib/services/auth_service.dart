@@ -490,7 +490,7 @@ class AuthService {
     String? profileImageUrl,
   }) async {
     try {
-      print('🔐 Updating user profile...');
+      debugPrint('🔐 Updating user profile...');
       
       // Get current user data
       final currentUserModel = await getUserData(uid);
@@ -514,12 +514,65 @@ class AuthService {
         await _auth.currentUser?.updateDisplayName(username);
       }
 
-      print('✅ User profile updated successfully');
+      debugPrint('✅ User profile updated successfully');
       return AuthResult.success(updatedUserModel);
 
     } catch (e) {
-      print('❌ Error updating user profile: $e');
+      debugPrint('❌ Error updating user profile: $e');
       return AuthResult.failure('Gagal mengupdate profil: ${e.toString()}');
+    }
+  }
+
+  // UPDATE USER DATA (Full UserModel)
+  Future<AuthResult> updateUserData(UserModel userModel) async {
+    try {
+      debugPrint('🔐 Updating user data...');
+      debugPrint('🔐 UID: ${userModel.uid}');
+      debugPrint('🔐 Contacts: ${userModel.contacts.length}');
+      debugPrint('🔐 Addresses: ${userModel.addresses.length}');
+      
+      // Convert to Firestore format with careful type handling
+      final firestoreData = {
+        'uid': userModel.uid,
+        'email': userModel.email,
+        'username': userModel.username,
+        'address': userModel.address,
+        'phoneNumber': userModel.phoneNumber,
+        'contacts': userModel.contacts.map((c) => {
+          'label': c.label,
+          'phoneNumber': c.phoneNumber,
+          'isDefault': c.isDefault,
+        }).toList(),
+        'addresses': userModel.addresses.map((a) => {
+          'label': a.label,
+          'address': a.address,
+          'isDefault': a.isDefault,
+        }).toList(),
+        'profileImageUrl': userModel.profileImageUrl,
+        'role': userModel.role.value,
+        'createdAt': userModel.createdAt?.toIso8601String(),
+        'lastLoginAt': userModel.lastLoginAt?.toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      // Use set with merge instead of update to avoid type conflicts
+      await _usersCollection.doc(userModel.uid).set(firestoreData, SetOptions(merge: true));
+
+      // Update Firebase user display name if username changed
+      if (userModel.username.isNotEmpty) {
+        try {
+          await _auth.currentUser?.updateDisplayName(userModel.username);
+        } catch (e) {
+          debugPrint('⚠️ Warning: Could not update display name: $e');
+        }
+      }
+
+      debugPrint('✅ User data updated successfully');
+      return AuthResult.success(userModel);
+
+    } catch (e) {
+      debugPrint('❌ Error updating user data: $e');
+      return AuthResult.failure('Gagal mengupdate data user: ${e.toString()}');
     }
   }
 

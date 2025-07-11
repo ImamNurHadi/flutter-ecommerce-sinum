@@ -6,7 +6,6 @@ import 'package:sinum/screens/profile_screen.dart';
 import 'package:sinum/screens/product_management_screen.dart';
 import 'package:sinum/services/firebase_service.dart';
 import 'package:sinum/services/auth_service.dart';
-import 'package:sinum/models/user_model.dart';
 
 class AdminMainScreen extends StatefulWidget {
   const AdminMainScreen({super.key});
@@ -28,7 +27,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      final userData = await _authService.getCurrentUserData();
+      await _authService.getCurrentUserData();
       setState(() {
         _isLoading = false;
       });

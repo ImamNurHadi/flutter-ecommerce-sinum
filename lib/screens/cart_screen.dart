@@ -6,6 +6,7 @@ import '../models/user_model.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../services/cart_service.dart';
+import '../screens/edit_profile_screen.dart'; // Added import for EditProfileScreen
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -138,162 +139,327 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _showCheckoutDialog() async {
-    final TextEditingController addressController = TextEditingController();
-    final TextEditingController phoneController = TextEditingController();
+    // Get user profile data
+    final userData = await _authService.getCurrentUserData();
+    if (userData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: User data not found'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Check if user has contacts and addresses
+    if (!userData.hasContactInfo || !userData.hasAddressInfo) {
+      _showProfileSetupDialog(userData);
+      return;
+    }
+
+    // Selected values
+    String? selectedAddress;
+    String? selectedPhone;
+    
+    // Set default values if available
+    if (userData.defaultAddress != null) {
+      selectedAddress = userData.defaultAddress!.address;
+    }
+    if (userData.defaultContact != null) {
+      selectedPhone = userData.defaultContact!.phoneNumber;
+    }
+
     final TextEditingController notesController = TextEditingController();
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi Checkout'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Alamat Pengiriman',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: addressController,
-                  decoration: const InputDecoration(
-                    hintText: 'Masukkan alamat lengkap',
-                    border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Konfirmasi Checkout'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Alamat Pengiriman',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                
-                const Text(
-                  'Nomor Telepon',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(
-                    hintText: 'Masukkan nomor telepon',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 16),
-                
-                const Text(
-                  'Catatan (Opsional)',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(
-                    hintText: 'Catatan untuk penjual',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 16),
-                
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Ringkasan Pesanan',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedAddress,
+                        hint: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('Pilih alamat pengiriman'),
+                        ),
+                        isExpanded: true,
+                        items: userData.addresses.map((address) {
+                          return DropdownMenuItem<String>(
+                            value: address.address,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    address.label,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    address.address,
+                                    style: const TextStyle(fontSize: 12),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedAddress = value;
+                          });
+                        },
                       ),
-                      const SizedBox(height: 8),
-                      ...cartItems.map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${item.productName} x${item.quantity}',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  const Text(
+                    'Nomor Telepon',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedPhone,
+                        hint: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('Pilih nomor telepon'),
+                        ),
+                        isExpanded: true,
+                        items: userData.contacts.map((contact) {
+                          return DropdownMenuItem<String>(
+                            value: contact.phoneNumber,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    contact.label,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    contact.phoneNumber,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedPhone = value;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  const Text(
+                    'Catatan (Opsional)',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: notesController,
+                    decoration: const InputDecoration(
+                      hintText: 'Catatan untuk penjual',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Ringkasan Pesanan',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        ...cartItems.map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${item.productName} x${item.quantity}',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                              Text(
+                                NumberFormat.currency(
+                                  locale: 'id_ID',
+                                  symbol: 'Rp ',
+                                  decimalDigits: 0,
+                                ).format(item.price * item.quantity),
                                 style: const TextStyle(fontSize: 12),
                               ),
+                            ],
+                          ),
+                        )),
+                        const Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total',
+                              style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             Text(
                               NumberFormat.currency(
                                 locale: 'id_ID',
                                 symbol: 'Rp ',
                                 decimalDigits: 0,
-                              ).format(item.price * item.quantity),
-                              style: const TextStyle(fontSize: 12),
+                              ).format(totalPrice),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFFF6B35),
+                              ),
                             ),
                           ],
                         ),
-                      )),
-                      const Divider(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Total',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            NumberFormat.currency(
-                              locale: 'id_ID',
-                              symbol: 'Rp ',
-                              decimalDigits: 0,
-                            ).format(totalPrice),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF6B35),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (selectedAddress == null || selectedPhone == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Alamat dan nomor telepon wajib dipilih'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                Navigator.of(context).pop();
+                await _processCheckout(
+                  selectedAddress!,
+                  selectedPhone!,
+                  notesController.text.trim(),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF6B35),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Konfirmasi Pesanan'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showProfileSetupDialog(UserModel userData) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Lengkapi Profile'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.warning,
+              color: Colors.orange,
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Sebelum checkout, harap lengkapi profile Anda terlebih dahulu:',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            if (!userData.hasContactInfo)
+              const Row(
+                children: [
+                  Icon(Icons.phone, color: Colors.red, size: 16),
+                  SizedBox(width: 8),
+                  Text('Tambahkan nomor telepon'),
+                ],
+              ),
+            if (!userData.hasAddressInfo)
+              const Row(
+                children: [
+                  Icon(Icons.location_on, color: Colors.red, size: 16),
+                  SizedBox(width: 8),
+                  Text('Tambahkan alamat pengiriman'),
+                ],
+              ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
+            onPressed: () => Navigator.pop(context),
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () async {
-              if (addressController.text.trim().isEmpty ||
-                  phoneController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Alamat dan nomor telepon wajib diisi'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-
-              Navigator.of(context).pop();
-              await _processCheckout(
-                addressController.text.trim(),
-                phoneController.text.trim(),
-                notesController.text.trim(),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const EditProfileScreen(),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF6B35),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Konfirmasi Pesanan'),
+            child: const Text('Edit Profile'),
           ),
         ],
       ),
@@ -576,13 +742,13 @@ class _CartScreenState extends State<CartScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        // Quantity Controls
-                        Row(
-                          children: [
-                            GestureDetector(
+                    // Quantity Controls
+                    Row(
+                      children: [
+                        GestureDetector(
                               onTap: () async {
                                 if (_currentUser != null) {
-                                  if (item.quantity > 1) {
+                            if (item.quantity > 1) {
                                     await _cartService.updateItemQuantity(
                                       _currentUser!.uid,
                                       item.productId,
@@ -593,7 +759,7 @@ class _CartScreenState extends State<CartScreen> {
                                     // Show confirmation dialog when quantity is 1
                                     await _showDeleteConfirmationDialog(item);
                                   }
-                                }
+                            }
                           },
                           child: Container(
                             width: 32,

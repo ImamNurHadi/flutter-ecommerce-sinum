@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import 'transaction_screen.dart';
+import 'edit_profile_screen.dart'; // Added import for EditProfileScreen
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -234,7 +235,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.person_outline,
                     title: 'Edit Profile',
                     onTap: () {
-                      _navigateToEditProfile();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfileScreen(),
+                        ),
+                      ).then((_) {
+                        // Refresh profile data after editing
+                        _loadUserData();
+                      });
                     },
                   ),
                   _buildMenuItem(
@@ -393,14 +402,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _navigateToEditProfile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Edit Profile feature akan segera hadir!'),
-        backgroundColor: Color(0xFFFF6B35),
-      ),
-    );
-  }
+
 
   Future<void> _logout() async {
     try {
@@ -446,6 +448,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text(
               'Logout',
               style: TextStyle(color: Color(0xFFFF6B35)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // New methods for profile actions
+  void _changePassword() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ubah Password feature akan segera hadir!'),
+        backgroundColor: Color(0xFFFF6B35),
+      ),
+    );
+  }
+
+     void _deleteAccount() {
+     final passwordController = TextEditingController();
+     
+     showDialog(
+       context: context,
+       builder: (context) => AlertDialog(
+         title: const Text('Hapus Akun'),
+         content: Column(
+           mainAxisSize: MainAxisSize.min,
+           children: [
+             const Text('Apakah Anda yakin ingin menghapus akun Anda? Proses ini tidak dapat dibatalkan.'),
+             const SizedBox(height: 16),
+             TextField(
+               controller: passwordController,
+               obscureText: true,
+               decoration: const InputDecoration(
+                 labelText: 'Konfirmasi Password',
+                 border: OutlineInputBorder(),
+               ),
+             ),
+           ],
+         ),
+         actions: [
+           TextButton(
+             onPressed: () => Navigator.pop(context),
+             child: const Text(
+               'Batal',
+               style: TextStyle(color: Colors.grey),
+             ),
+           ),
+           TextButton(
+             onPressed: () {
+               if (passwordController.text.isNotEmpty) {
+                 Navigator.pop(context);
+                 _authService.deleteAccount(password: passwordController.text).then((_) {
+                   if (mounted) {
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       const SnackBar(
+                         content: Text('Akun Anda berhasil dihapus.'),
+                         backgroundColor: Colors.green,
+                       ),
+                     );
+                     _logout();
+                   }
+                 }).catchError((error) {
+                   if (mounted) {
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       SnackBar(
+                         content: Text('Error deleting account: ${error.toString()}'),
+                         backgroundColor: Colors.red,
+                       ),
+                     );
+                   }
+                 });
+               }
+             },
+             child: const Text(
+               'Hapus',
+               style: TextStyle(color: Colors.red),
             ),
           ),
         ],

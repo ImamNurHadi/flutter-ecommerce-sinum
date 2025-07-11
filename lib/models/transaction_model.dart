@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum TransactionStatus {
-  pending('pending'),
   processing('processing'),
   shipped('shipped'),
   delivered('delivered'),
@@ -12,8 +11,6 @@ enum TransactionStatus {
 
   static TransactionStatus fromString(String value) {
     switch (value.toLowerCase()) {
-      case 'pending':
-        return TransactionStatus.pending;
       case 'processing':
         return TransactionStatus.processing;
       case 'shipped':
@@ -23,18 +20,16 @@ enum TransactionStatus {
       case 'cancelled':
         return TransactionStatus.cancelled;
       default:
-        return TransactionStatus.pending;
+        return TransactionStatus.processing; // Default changed to processing
     }
   }
 
   String get displayName {
     switch (this) {
-      case TransactionStatus.pending:
-        return 'Menunggu Pembayaran';
       case TransactionStatus.processing:
         return 'Diproses';
       case TransactionStatus.shipped:
-        return 'Menunggu Pengiriman';
+        return 'Dalam Pengiriman';
       case TransactionStatus.delivered:
         return 'Selesai';
       case TransactionStatus.cancelled:
@@ -110,7 +105,7 @@ class Transaction {
     required this.userEmail,
     required this.items,
     required this.totalAmount,
-    this.status = TransactionStatus.pending,
+    this.status = TransactionStatus.processing,
     this.deliveryAddress,
     this.phoneNumber,
     this.notes,
@@ -151,7 +146,7 @@ class Transaction {
       userEmail: data['userEmail'] ?? '',
       items: items,
       totalAmount: (data['totalAmount'] ?? 0).toDouble(),
-      status: TransactionStatus.fromString(data['status'] ?? 'pending'),
+      status: TransactionStatus.fromString(data['status'] ?? 'processing'),
       deliveryAddress: data['deliveryAddress'],
       phoneNumber: data['phoneNumber'],
       notes: data['notes'],
@@ -197,7 +192,7 @@ class Transaction {
   // Helper methods
   int get totalItems => items.fold(0, (total, item) => total + item.quantity);
   
-  bool get isPending => status == TransactionStatus.pending;
+  bool get isPending => status == TransactionStatus.processing;
   bool get isProcessing => status == TransactionStatus.processing;
   bool get isShipped => status == TransactionStatus.shipped;
   bool get isDelivered => status == TransactionStatus.delivered;
